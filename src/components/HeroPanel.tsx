@@ -10,9 +10,11 @@ const NUDGE_DISMISS_KEY = "hero_nudge_dismissed_v1";
 export function HeroPanel({
   onStartAsBusiness,
   onStartAsFounder,
+  onDismiss,
 }: {
   onStartAsBusiness: () => void;
   onStartAsFounder: () => void;
+  onDismiss?: () => void;
 }) {
   const [dismissed, setDismissed] = useState(true); // start hidden to avoid flash
   const [mounted, setMounted] = useState(false);
@@ -26,6 +28,7 @@ export function HeroPanel({
   function dismiss() {
     localStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
+    onDismiss?.();
   }
 
   if (!mounted || dismissed) return null;

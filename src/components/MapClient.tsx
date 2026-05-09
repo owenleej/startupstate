@@ -712,8 +712,17 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
     clusterMarkersRef.current.clear();
   }, [visibleIds, companies]);
 
-  // heroOpen: unauthenticated hero panel is visible (left side, ~390px)
-  const heroOpen = !isLoggedIn;
+  // heroOpen: tracks whether the unauthenticated hero panel is currently visible.
+  // Starts true for unauthenticated users; set to false when the panel is dismissed.
+  // heroOpen tracks whether the hero panel is occupying the left side.
+  // Lazy initialiser reads localStorage on first render so there's no padding flash.
+  const [heroOpen, setHeroOpen] = useState(() => {
+    if (isLoggedIn) return false;
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("hero_panel_dismissed_v1") !== "1";
+    }
+    return true; // SSR: assume open; HeroPanel corrects on mount
+  });
 
   function getPadding(sidebarOpen: boolean, panelOpen: boolean) {
     return {
@@ -936,6 +945,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
         <HeroPanel
           onStartAsFounder={() => setShowNewFounder(true)}
           onStartAsBusiness={() => window.location.href = "/login"}
+          onDismiss={() => setHeroOpen(false)}
         />
       )}
 
