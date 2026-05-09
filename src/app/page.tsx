@@ -3,7 +3,7 @@ import MapClient, { type Company } from "@/components/MapClient";
 import type { InvestorProfile } from "@/app/investor/actions";
 
 const COMPANY_FIELDS =
-  "id, name, description, website, linkedin_url, stage, employees, section, lat, lng, utah_county, product_type, owner_id, status, seeking_funding, investor_contact_email";
+  "id, name, description, website, linkedin_url, stage, employees, section, lat, lng, utah_county, product_type, owner_id, status, seeking_funding, investor_contact_email, hiring, careers_url";
 
 export default async function Home() {
   const supabase = await createClient();

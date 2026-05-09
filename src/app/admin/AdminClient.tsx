@@ -56,6 +56,8 @@ type Company = {
   actively_fundraising: boolean | null;
   seeking_funding: boolean;
   investor_contact_email: string | null;
+  hiring: boolean;
+  careers_url: string | null;
   newsletter_subscribed: boolean;
 };
 
@@ -201,6 +203,7 @@ const EMPTY_COMPANY: CompanyForm = {
   founded_year: null, industry: null, is_rural: null,
   has_international_ops: null, top_needs: [], founder_demographics: [],
   actively_fundraising: null, seeking_funding: false, investor_contact_email: null,
+  hiring: false, careers_url: null,
   newsletter_subscribed: false,
 };
 
@@ -385,6 +388,18 @@ function CompanyFormModal({
             </Field>
             <Field label="Investor contact email">
               <input className={inputCls} type="email" value={form.investor_contact_email ?? ""} onChange={(e) => set("investor_contact_email", e.target.value || null)} placeholder="founder@company.com" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Currently hiring">
+              <select className={selectCls} value={String(form.hiring)} onChange={(e) => set("hiring", e.target.value === "true")}>
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </select>
+            </Field>
+            <Field label="Careers page URL">
+              <input className={inputCls} type="url" value={form.careers_url ?? ""} onChange={(e) => set("careers_url", e.target.value || null)} placeholder="https://company.com/careers" />
             </Field>
           </div>
 

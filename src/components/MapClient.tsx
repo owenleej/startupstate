@@ -6,6 +6,7 @@ import CompanyPanel from "./CompanyPanel";
 import AddCompanyModal from "./AddCompanyModal";
 import InvestorProfileModal from "./InvestorProfileModal";
 import InvestorMatchesSidebar from "./InvestorMatchesSidebar";
+import NewFounderModal from "./NewFounderModal";
 import { createClient } from "@/lib/supabase/client";
 import type { InvestorProfile, InvestorProfileInput } from "@/app/investor/actions";
 import { matchCompaniesForInvestor, type InvestorMatch } from "@/app/investor/matchActions";
@@ -100,6 +101,8 @@ export type Company = {
   member_verified?: boolean;
   seeking_funding?: boolean;
   investor_contact_email?: string | null;
+  hiring?: boolean;
+  careers_url?: string | null;
 };
 
 const STAGES = [
@@ -269,6 +272,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
   const [myCompanySelected, setMyCompanySelected] = useState<Company | null>(null);
   const [showMyCompaniesDropdown, setShowMyCompaniesDropdown] = useState(false);
   const [showAddCompany, setShowAddCompany] = useState(false);
+  const [showNewFounder, setShowNewFounder] = useState(false);
   const [showInvestorModal, setShowInvestorModal] = useState(false);
   const [currentInvestorProfile, setCurrentInvestorProfile] = useState<InvestorProfile | null>(investorProfile);
   const [investorMatches, setInvestorMatches] = useState<InvestorMatch[] | null>(null);
@@ -300,6 +304,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState<string | null>(null);
   const [activeSize, setActiveSize] = useState<string | null>(null);
+  const [activeHiring, setActiveHiring] = useState(false);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -324,9 +329,10 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
           (!activeSection || c.section === activeSection) &&
           (!activeStage || c.stage === activeStage) &&
           (!activeSize || c.employees === activeSize) &&
+          (!activeHiring || c.hiring === true) &&
           (!search || c.name.toLowerCase().includes(search.toLowerCase())),
       ),
-    [investorMatchIds, activeSection, activeStage, activeSize, companies, search],
+    [investorMatchIds, activeSection, activeStage, activeSize, activeHiring, companies, search],
   );
 
   async function runInvestorMatch() {
@@ -761,6 +767,15 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
             <span className="text-white font-semibold">{visible.length}</span>{" "}
             {visible.length === 1 ? "company" : "companies"}
           </div>
+          <button
+            onClick={() => setShowNewFounder(true)}
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-sm font-semibold rounded-2xl px-4 py-2.5 shadow-lg transition-colors whitespace-nowrap"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Start a Company
+          </button>
           {isLoggedIn && (
             <button
               onClick={() => setShowAddCompany(true)}
@@ -851,6 +866,17 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
           onChange={setActiveSize}
           renderOption={(o) => `${o} employees`}
         />
+        <button
+          onClick={() => setActiveHiring((v) => !v)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium shadow-md transition-colors whitespace-nowrap ${
+            activeHiring
+              ? "bg-emerald-500 text-white border border-emerald-400"
+              : "bg-zinc-900/85 backdrop-blur-md border border-zinc-700/50 text-zinc-300 hover:text-white"
+          }`}
+        >
+          <span>💼</span>
+          We&apos;re Hiring
+        </button>
         {investorMatches && (
           <button
             onClick={() => setInvestorFilterActive((v) => !v)}
@@ -964,6 +990,9 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
           </button>
         </div>
       )}
+
+      {/* ── New founder modal ─────────────────────────────────────────────────── */}
+      {showNewFounder && <NewFounderModal onClose={() => setShowNewFounder(false)} />}
 
       {/* ── Add company modal ────────────────────────────────────────────────── */}
       {showAddCompany && <AddCompanyModal onClose={() => setShowAddCompany(false)} />}

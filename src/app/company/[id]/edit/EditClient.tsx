@@ -86,6 +86,8 @@ type CompanyRow = {
   founder_demographics: string[] | null;
   seeking_funding: boolean;
   investor_contact_email: string | null;
+  hiring: boolean;
+  careers_url: string | null;
   status: string;
   newsletter_subscribed: boolean;
 };
@@ -107,6 +109,8 @@ type Form = {
   founder_demographics: string[];
   seeking_funding: boolean;
   investor_contact_email: string;
+  hiring: boolean;
+  careers_url: string;
 };
 
 function companyToForm(c: CompanyRow): Form {
@@ -127,6 +131,8 @@ function companyToForm(c: CompanyRow): Form {
     founder_demographics: c.founder_demographics ?? [],
     seeking_funding: c.seeking_funding ?? false,
     investor_contact_email: c.investor_contact_email ?? "",
+    hiring: c.hiring ?? false,
+    careers_url: c.careers_url ?? "",
   };
 }
 
@@ -460,6 +466,47 @@ export default function EditClient({ company }: { company: CompanyRow }) {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        {/* Hiring */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900 uppercase tracking-wide">Hiring</h2>
+            <p className="text-xs text-zinc-500 mt-1">Let job seekers know you&apos;re actively growing your team.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setForm((f) => ({ ...f, hiring: !f.hiring }))}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl border-2 text-left transition-all ${
+              form.hiring ? "border-emerald-400 bg-emerald-50" : "border-zinc-200 bg-white hover:border-zinc-300"
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+              form.hiring ? "bg-emerald-600 border-emerald-600" : "border-zinc-300"
+            }`}>
+              {form.hiring && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">We&apos;re actively hiring</p>
+              <p className="text-xs text-zinc-400 mt-0.5">Show a hiring badge on your profile and appear in hiring filters</p>
+            </div>
+          </button>
+          <div>
+            <label className="block text-xs font-medium text-zinc-600 mb-1">
+              Careers page URL <span className="text-zinc-400">(optional)</span>
+            </label>
+            <input
+              type="url"
+              value={form.careers_url}
+              onChange={(e) => setForm((f) => ({ ...f, careers_url: e.target.value }))}
+              placeholder="careers.yourcompany.com"
+              className="w-full border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 transition-colors"
+            />
           </div>
         </section>
 

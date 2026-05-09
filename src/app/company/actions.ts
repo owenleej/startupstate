@@ -58,6 +58,8 @@ export type AddCompanyInput = {
   founder_demographics: string[];
   seeking_funding: boolean;
   investor_contact_email: string;
+  hiring: boolean;
+  careers_url: string;
 };
 
 // ── AI enrichment ─────────────────────────────────────────────────────────────
@@ -164,6 +166,8 @@ export async function addMyCompany(
         founder_demographics: input.founder_demographics.length ? input.founder_demographics : null,
         seeking_funding: input.seeking_funding,
         investor_contact_email: input.investor_contact_email || null,
+        hiring: input.hiring,
+        careers_url: input.careers_url || null,
         is_rural,
         industry: enriched.industry,
         top_needs: enriched.top_needs.length ? enriched.top_needs : null,
@@ -238,6 +242,8 @@ export async function updateMyCompany(
       founder_demographics: input.founder_demographics.length ? input.founder_demographics : null,
       seeking_funding: input.seeking_funding,
       investor_contact_email: input.investor_contact_email || null,
+      hiring: input.hiring,
+      careers_url: input.careers_url || null,
       is_rural,
       industry: enriched.industry,
       top_needs: enriched.top_needs.length ? enriched.top_needs : null,
