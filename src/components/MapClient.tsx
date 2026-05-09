@@ -424,7 +424,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
         data: buildGeoJSON(visibleIdsRef.current),
         cluster: true,
         clusterMaxZoom: 17,
-        clusterRadius: 56,
+        clusterRadius: 48,
       });
 
       // Invisible cluster layer — hit target for queryRenderedFeatures

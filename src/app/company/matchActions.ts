@@ -81,6 +81,7 @@ function compactCompany(c: Record<string, unknown>) {
 export async function matchResources(
   companyId: number,
   mode: MatchMode,
+  excludeIds: number[] = [],
 ): Promise<{ matches: ResourceMatch[] | null; error: string | null }> {
   const supabase = await createClient();
 
@@ -94,6 +95,11 @@ export async function matchResources(
 
   if (companyErr || !company) return { matches: null, error: "Could not load company." };
   if (resourcesErr || !resources) return { matches: null, error: "Could not load resources." };
+
+  // Filter out already-shown resources
+  const availableResources = excludeIds.length
+    ? resources.filter((r) => !excludeIds.includes(r.id))
+    : resources;
 
   const modeInstruction =
     mode === "general"
@@ -116,7 +122,7 @@ ${JSON.stringify(compactCompany(company as Record<string, unknown>), null, 2)}
 ## Task
 ${modeInstruction}
 
-From the list of ${resources.length} resources below, identify the TOP 3 that represent the most valuable,
+From the list of ${availableResources.length} resources below, identify the TOP 3 that represent the most valuable,
 actionable opportunities for this specific company RIGHT NOW. Focus on resources that feel like a genuine
 opportunity waiting to be claimed — not generic ones that apply to everyone.
 
@@ -124,7 +130,7 @@ Rank by specificity of fit and immediacy of value. Prefer resources with emails 
 the company is early stage. Prefer resources with links (online forms/applications) when they're more mature.
 
 ## Available resources
-${JSON.stringify(resources.map(compactResource), null, 2)}
+${JSON.stringify(availableResources.map(compactResource), null, 2)}
 
 ## Response format
 Return ONLY a valid JSON object with this exact shape — no markdown, no explanation:

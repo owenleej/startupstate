@@ -404,7 +404,7 @@ function MatchCard({
 // ── Results view ──────────────────────────────────────────────────────────────
 
 function ResultsView({
-  matches,
+  matches: initialMatches,
   mode,
   companyId,
   companyName,
@@ -422,10 +422,30 @@ function ResultsView({
   onBack: () => void;
   onClose: () => void;
 }) {
+  const [matches, setMatches] = useState<ResourceMatch[]>(initialMatches);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const [exhausted, setExhausted] = useState(false);
+
   const modeLabel =
     mode === "general"
       ? "Best overall matches"
       : `Resources for: ${GOALS.find((g) => g.value === (mode as { goal: string }).goal)?.label ?? (mode as { goal: string }).goal}`;
+
+  async function loadMore() {
+    setLoadingMore(true);
+    setMoreError(null);
+    const excludeIds = matches.map((m) => m.resource_id);
+    const result = await matchResources(companyId, mode, excludeIds);
+    setLoadingMore(false);
+    if (result.matches && result.matches.length > 0) {
+      setMatches((prev) => [...prev, ...result.matches!]);
+    } else if (result.matches && result.matches.length === 0) {
+      setExhausted(true);
+    } else {
+      setMoreError("Couldn't load more — try again.");
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -442,7 +462,7 @@ function ResultsView({
             </button>
             <div>
               <p className="text-sm font-bold text-zinc-900">{modeLabel}</p>
-              <p className="text-xs text-zinc-400">{matches.length} resources selected from 200+ programs</p>
+              <p className="text-xs text-zinc-400">{matches.length} resources found from 200+ programs</p>
             </div>
           </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors">
@@ -456,6 +476,38 @@ function ResultsView({
           {matches.map((match, i) => (
             <MatchCard key={match.resource_id} match={match} companyId={companyId} index={i} />
           ))}
+
+          {/* Load more */}
+          {!exhausted && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-zinc-200 text-sm font-medium text-zinc-500 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingMore ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Finding 3 more…
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Show 3 more matches
+                </>
+              )}
+            </button>
+          )}
+          {exhausted && (
+            <p className="text-center text-xs text-zinc-400 py-2">You&apos;ve seen all the best matches for this focus area.</p>
+          )}
+          {moreError && (
+            <p className="text-center text-xs text-red-500 py-1">{moreError} <button onClick={loadMore} className="underline">Retry</button></p>
+          )}
         </div>
 
         <div className="px-6 py-4 border-t border-zinc-100 space-y-3">
