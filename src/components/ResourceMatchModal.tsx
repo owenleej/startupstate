@@ -96,10 +96,10 @@ function ModeSelector({
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-zinc-100 flex items-start justify-between">
           <div>
-            <h2 className="text-base font-bold text-zinc-900">Match with State Resources</h2>
-            <p className="text-sm text-zinc-500 mt-0.5">What are you focused on right now?</p>
+            <h2 className="text-base font-extrabold text-zinc-900 mb-1">Utah built 200+ programs for businesses like yours.</h2>
+            <p className="text-sm text-zinc-500">Grants, loans, training, expert mentorship — most people never know they exist. Let AI match you to the ones you actually qualify for, right now.</p>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors mt-0.5">
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg hover:bg-zinc-100 transition-colors mt-0.5 ml-3 flex-shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -107,6 +107,7 @@ function ModeSelector({
         </div>
 
         <div className="px-6 py-4 space-y-4">
+          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">What are you focused on right now?</p>
           {/* Specific goal grid */}
           <div className="grid grid-cols-2 gap-2">
             {GOALS.map((goal) => {
@@ -139,12 +140,13 @@ function ModeSelector({
           {/* General match */}
           <button
             onClick={() => onSelect("general")}
-            className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-zinc-100 hover:border-zinc-300 hover:bg-zinc-50 transition-all text-left"
+            className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-transparent transition-all text-left hover:shadow-md"
+            style={{ background: "linear-gradient(white, white) padding-box, linear-gradient(135deg, #7c3aed, #a855f7, #ec4899) border-box" }}
           >
-            <span className="text-xl">✨</span>
+            <span className="text-xl">✦</span>
             <div>
-              <p className="text-sm font-semibold text-zinc-900">Show my best overall matches</p>
-              <p className="text-xs text-zinc-400 mt-0.5">Let AI find the top programs across all categories based on my full profile</p>
+              <p className="text-sm font-semibold text-zinc-900">Surprise me — show my best matches</p>
+              <p className="text-xs text-zinc-400 mt-0.5">AI scans all 200+ programs and surfaces the top opportunities across every category</p>
             </div>
           </button>
         </div>
@@ -156,10 +158,10 @@ function ModeSelector({
               if (selectedGoal) onSelect({ goal: selectedGoal });
             }}
             disabled={!selectedGoal}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-100 disabled:text-zinc-400 text-white font-semibold rounded-xl py-3 text-sm transition-colors shadow-sm disabled:shadow-none"
+            className="btn-ai w-full py-3 text-sm"
           >
             {selectedGoal
-              ? `Find resources for: ${GOALS.find((g) => g.value === selectedGoal)?.label}`
+              ? `✦ Find my free resources →`
               : "Select a focus area above"}
           </button>
         </div>
@@ -173,8 +175,8 @@ function ModeSelector({
 function LoadingSkeleton({ mode }: { mode: MatchMode }) {
   const label =
     mode === "general"
-      ? "Scanning 200+ programs for your best fits…"
-      : `Finding the best resources to help you ${GOALS.find((g) => g.value === (mode as { goal: string }).goal)?.label.toLowerCase() ?? "with your goal"}…`;
+      ? "Scanning all 200+ free programs for your best opportunities…"
+      : `Digging through 200+ programs to find free help for: ${GOALS.find((g) => g.value === (mode as { goal: string }).goal)?.label.toLowerCase() ?? "your goal"}…`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -247,12 +249,13 @@ function EmailDraftSection({
     return (
       <button
         onClick={generate}
-        className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+        className="btn-ai flex items-center gap-1.5 text-xs px-3 py-1.5"
+        style={{ borderRadius: "0.5rem" }}
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-        Generate email draft
+        ✦ Draft email with AI
       </button>
     );
   }
@@ -405,7 +408,8 @@ function ResultsView({
   mode,
   companyId,
   companyName,
-  memberVerified,
+  isLoggedIn,
+  initialSubscribed,
   onBack,
   onClose,
 }: {
@@ -413,7 +417,8 @@ function ResultsView({
   mode: MatchMode;
   companyId: number;
   companyName: string;
-  memberVerified: boolean;
+  isLoggedIn: boolean;
+  initialSubscribed: boolean;
   onBack: () => void;
   onClose: () => void;
 }) {
@@ -457,7 +462,8 @@ function ResultsView({
           <NewsletterSignup
             companyId={companyId}
             companyName={companyName}
-            memberVerified={memberVerified}
+            isLoggedIn={isLoggedIn}
+            initialSubscribed={initialSubscribed}
             variant="inline"
           />
           <div className="flex items-center justify-between">
@@ -502,12 +508,14 @@ type Stage = "select" | "loading" | "results" | "error";
 export default function ResourceMatchModal({
   companyId,
   companyName,
-  memberVerified = true,
+  isLoggedIn = true,
+  initialSubscribed = false,
   onClose,
 }: {
   companyId: number;
   companyName: string;
-  memberVerified?: boolean;
+  isLoggedIn?: boolean;
+  initialSubscribed?: boolean;
   onClose: () => void;
 }) {
   const [stage, setStage] = useState<Stage>("select");
@@ -537,7 +545,8 @@ export default function ResourceMatchModal({
       mode={mode}
       companyId={companyId}
       companyName={companyName}
-      memberVerified={memberVerified}
+      isLoggedIn={isLoggedIn}
+      initialSubscribed={initialSubscribed}
       onBack={() => setStage("select")}
       onClose={onClose}
     />

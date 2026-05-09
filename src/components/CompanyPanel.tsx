@@ -120,12 +120,13 @@ function InvestorEmailSection({ companyId, recipientEmail }: { companyId: number
     return (
       <button
         onClick={generate}
-        className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-2xl py-3.5 text-sm transition-colors shadow-sm"
+        className="btn-ai w-full flex items-center justify-center gap-2 py-3.5 text-sm"
+        style={{ borderRadius: "1rem" }}
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-        Draft Investor Email
+        ✦ Draft Investor Email
       </button>
     );
   }
@@ -275,6 +276,8 @@ function SingleView({
   isLoggedIn,
   isOwner,
   memberVerified,
+  initialSubscribed,
+  autoOpenMatch,
   isInvestor,
   isFollowing,
   onFollowToggle,
@@ -284,12 +287,14 @@ function SingleView({
   isLoggedIn: boolean;
   isOwner: boolean;
   memberVerified: boolean;
+  initialSubscribed: boolean;
+  autoOpenMatch?: boolean;
   isInvestor: boolean;
   isFollowing: boolean;
   onFollowToggle: (follow: boolean) => void;
 }) {
   const ss = company.section ? SECTION_STYLES[company.section] : null;
-  const [showMatch, setShowMatch] = useState(false);
+  const [showMatch, setShowMatch] = useState(autoOpenMatch ?? false);
 
   return (
     <>
@@ -449,15 +454,13 @@ function SingleView({
             {/* Match with resources — always available */}
             <button
               onClick={() => setShowMatch(true)}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-2xl py-3.5 text-sm transition-colors shadow-sm"
+              className="btn-ai w-full flex items-center justify-center gap-2 py-3.5 text-sm"
+              style={{ borderRadius: "1rem" }}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-              Match with State Resources
+              ✦ Find Your State Resources — It&apos;s Free
             </button>
             {showMatch && (
-              <ResourceMatchModal companyId={company.id} companyName={company.name} memberVerified={memberVerified} onClose={() => setShowMatch(false)} />
+              <ResourceMatchModal companyId={company.id} companyName={company.name} isLoggedIn={isLoggedIn} initialSubscribed={initialSubscribed} onClose={() => setShowMatch(false)} />
             )}
           </div>
         ) : isInvestor ? (
@@ -604,6 +607,8 @@ export default function CompanyPanel({
   isLoggedIn = false,
   isOwner = false,
   memberVerified = false,
+  initialSubscribed = false,
+  autoOpenMatch = false,
   isInvestor = false,
   isFollowing = false,
   onFollowToggle = () => {},
@@ -615,6 +620,8 @@ export default function CompanyPanel({
   isLoggedIn?: boolean;
   isOwner?: boolean;
   memberVerified?: boolean;
+  initialSubscribed?: boolean;
+  autoOpenMatch?: boolean;
   isInvestor?: boolean;
   isFollowing?: boolean;
   onFollowToggle?: (follow: boolean) => void;
@@ -651,6 +658,8 @@ export default function CompanyPanel({
             isLoggedIn={isLoggedIn}
             isOwner={isOwner}
             memberVerified={memberVerified}
+            initialSubscribed={initialSubscribed}
+            autoOpenMatch={autoOpenMatch}
             isInvestor={isInvestor}
             isFollowing={isFollowing}
             onFollowToggle={onFollowToggle}

@@ -11,7 +11,7 @@ export default async function Home() {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Fetch approved map companies + all companies owned by this user (any status) + investor profile in parallel
-  const [{ data: approvedData }, { data: ownedData }, { data: investorData }, { data: followsData }] = await Promise.all([
+  const [{ data: approvedData }, { data: ownedData }, { data: investorData }, { data: followsData }, { data: newsletterData }] = await Promise.all([
     supabase
       .from("companies")
       .select(COMPANY_FIELDS)
@@ -39,6 +39,12 @@ export default async function Home() {
           .select("company_id")
           .eq("investor_user_id", user.id)
       : Promise.resolve({ data: [] }),
+    user
+      ? supabase
+          .from("company_newsletter_subscriptions")
+          .select("company_id")
+          .eq("user_id", user.id)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const isAdmin = user?.app_metadata?.role === "admin";
@@ -60,6 +66,7 @@ export default async function Home() {
       ownedCompanies={ownedCompanies}
       investorProfile={(investorData as InvestorProfile | null) ?? null}
       followedCompanyIds={new Set((followsData ?? []).map((f: { company_id: number }) => f.company_id))}
+      newsletterSubscribedIds={new Set((newsletterData ?? []).map((n: { company_id: number }) => n.company_id))}
     />
   );
 }

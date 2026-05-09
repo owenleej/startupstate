@@ -259,7 +259,41 @@ export async function updateMyCompany(
   return { error: null };
 }
 
-// ── Newsletter subscription ────────────────────────────────────────────────────
+// ── Per-user per-company resource newsletter subscriptions ───────────────────
+
+export async function subscribeToResourceNewsletter(
+  companyId: number,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to subscribe." };
+
+  const { error } = await supabase
+    .from("company_newsletter_subscriptions")
+    .insert({ user_id: user.id, company_id: companyId });
+
+  if (error && error.code !== "23505") return { error: error.message }; // ignore duplicate
+  return { error: null };
+}
+
+export async function unsubscribeFromResourceNewsletter(
+  companyId: number,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("company_newsletter_subscriptions")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("company_id", companyId);
+
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+// ── Newsletter subscription (legacy — owner-scoped) ────────────────────────────
 
 export async function setNewsletterSubscription(
   companyId: number,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import CompanyPanel from "./CompanyPanel";
 import AddCompanyModal from "./AddCompanyModal";
@@ -257,7 +258,7 @@ function createMarkerEl(company: Company, onClick: () => void): HTMLElement {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function MapClient({ companies, isAdmin = false, isLoggedIn = false, ownedCompanies = [], investorProfile = null, followedCompanyIds: initialFollowedIds = new Set() }: { companies: Company[]; isAdmin?: boolean; isLoggedIn?: boolean; ownedCompanies?: Company[]; investorProfile?: InvestorProfile | null; followedCompanyIds?: Set<number> }) {
+export default function MapClient({ companies, isAdmin = false, isLoggedIn = false, ownedCompanies = [], investorProfile = null, followedCompanyIds: initialFollowedIds = new Set(), newsletterSubscribedIds = new Set() }: { companies: Company[]; isAdmin?: boolean; isLoggedIn?: boolean; ownedCompanies?: Company[]; investorProfile?: InvestorProfile | null; followedCompanyIds?: Set<number>; newsletterSubscribedIds?: Set<number> }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<number, mapboxgl.Marker>>(new Map());
@@ -271,7 +272,10 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
   const [selectedCluster, setSelectedCluster] = useState<Company[] | null>(null);
   const [myCompanySelected, setMyCompanySelected] = useState<Company | null>(null);
   const [showMyCompaniesDropdown, setShowMyCompaniesDropdown] = useState(false);
+  const router = useRouter();
   const [showAddCompany, setShowAddCompany] = useState(false);
+  const [newlyCreatedCompanyId, setNewlyCreatedCompanyId] = useState<number | null>(null);
+  const [autoOpenMatchForId, setAutoOpenMatchForId] = useState<number | null>(null);
   const [showNewFounder, setShowNewFounder] = useState(false);
   const [showInvestorModal, setShowInvestorModal] = useState(false);
   const [currentInvestorProfile, setCurrentInvestorProfile] = useState<InvestorProfile | null>(investorProfile);
@@ -355,6 +359,19 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
   const visibleIds = useMemo(() => new Set(visible.map((c) => c.id)), [visible]);
   const visibleIdsRef = useRef(visibleIds);
   useEffect(() => { visibleIdsRef.current = visibleIds; }, [visibleIds]);
+
+  // When a company is newly created, wait for it to appear in ownedCompanies then open it
+  useEffect(() => {
+    if (!newlyCreatedCompanyId) return;
+    const found = ownedCompanies.find((c) => c.id === newlyCreatedCompanyId);
+    if (found) {
+      setMyCompanySelected(found);
+      setSelected(null);
+      setSelectedCluster(null);
+      setAutoOpenMatchForId(found.id);
+      setNewlyCreatedCompanyId(null);
+    }
+  }, [newlyCreatedCompanyId, ownedCompanies]);
 
   const companyById = useMemo(() => {
     const m = new Map<number, Company>();
@@ -818,10 +835,10 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
                     runInvestorMatch();
                   }
                 }}
-                className={`flex items-center gap-1.5 text-sm font-semibold rounded-2xl px-3.5 py-2.5 shadow-lg transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-1.5 text-sm font-semibold rounded-2xl px-3.5 py-2.5 shadow-lg whitespace-nowrap ${
                   showInvestorSidebar
-                    ? "bg-violet-100 text-violet-700 border border-violet-300"
-                    : "bg-zinc-900/85 backdrop-blur-md border border-zinc-700/50 text-zinc-300 hover:text-white hover:border-violet-500"
+                    ? "bg-violet-100 text-violet-700 border border-violet-300 transition-colors"
+                    : "btn-ai"
                 }`}
               >
                 {investorMatchLoading ? (
@@ -834,7 +851,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                   </svg>
                 )}
-                {investorMatches ? "My Matches" : investorMatchLoading ? "Finding…" : "Find Matches"}
+                {investorMatches ? "My Investment Matches" : investorMatchLoading ? "Finding…" : "✦ Find Investment Matches"}
               </button>
             </div>
           )}
@@ -1010,7 +1027,16 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
       {showNewFounder && <NewFounderModal onClose={() => setShowNewFounder(false)} />}
 
       {/* ── Add company modal ────────────────────────────────────────────────── */}
-      {showAddCompany && <AddCompanyModal onClose={() => setShowAddCompany(false)} />}
+      {showAddCompany && (
+        <AddCompanyModal
+          onClose={() => setShowAddCompany(false)}
+          onCompanyCreated={(id) => {
+            setAutoOpenMatchForId(id);
+            setNewlyCreatedCompanyId(id);
+            router.refresh(); // triggers server rerender so ownedCompanies includes the new company
+          }}
+        />
+      )}
 
       {/* ── Investor profile modal ───────────────────────────────────────────── */}
       {showInvestorModal && (
@@ -1075,6 +1101,8 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
         const memberVerified = ownedRecord?.member_verified ?? false;
         const isInvestor = !!currentInvestorProfile;
         const isFollowing = panelCompany ? followedIds.has(panelCompany.id) : false;
+        const initialSubscribed = panelCompany ? newsletterSubscribedIds.has(panelCompany.id) : false;
+        const autoOpenMatch = panelCompany ? autoOpenMatchForId === panelCompany.id : false;
         return (
           <CompanyPanel
             company={panelCompany}
@@ -1086,13 +1114,15 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
               const map = mapRef.current;
               if (map) map.flyTo({ center: [c.lng, c.lat], zoom: 16, padding: getPadding(showInvestorSidebar, true), duration: 700 });
             }}
-            onClose={() => { setSelected(null); setSelectedCluster(null); setMyCompanySelected(null); }}
+            onClose={() => { setSelected(null); setSelectedCluster(null); setMyCompanySelected(null); setAutoOpenMatchForId(null); }}
             isLoggedIn={isLoggedIn}
             isOwner={isOwner}
             memberVerified={memberVerified}
+            initialSubscribed={initialSubscribed}
             isInvestor={isInvestor}
             isFollowing={isFollowing}
             onFollowToggle={(follow) => panelCompany && handleFollow(panelCompany.id, follow)}
+            autoOpenMatch={autoOpenMatch}
           />
         );
       })()}

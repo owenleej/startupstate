@@ -89,7 +89,7 @@ const EMPTY: Form = {
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
-export default function AddCompanyModal({ onClose }: { onClose: () => void }) {
+export default function AddCompanyModal({ onClose, onCompanyCreated }: { onClose: () => void; onCompanyCreated?: (id: number) => void }) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [geocoding, setGeocoding] = useState(false);
   const [geocoded, setGeocoded] = useState(false);
@@ -180,12 +180,22 @@ export default function AddCompanyModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <button
-            onClick={onClose}
-            className="w-full bg-zinc-900 hover:bg-zinc-700 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
-          >
-            Done
-          </button>
+          <div className="flex flex-col gap-3">
+            {newCompanyId && onCompanyCreated && (
+              <button
+                onClick={() => { onCompanyCreated(newCompanyId); onClose(); }}
+                className="btn-ai w-full flex items-center justify-center gap-2 py-3 text-sm"
+              >
+                ✦ Find programs that can help you → it&apos;s free
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-full bg-zinc-900 hover:bg-zinc-700 text-white font-semibold rounded-xl py-3 text-sm transition-colors"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -340,7 +340,7 @@ export default function InvestorProfileModal({
                 onClose();
               }}
               disabled={saving || saved}
-              className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-sm"
+              className="btn-ai w-full flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-60"
             >
               {saving ? (
                 <>
@@ -355,7 +355,7 @@ export default function InvestorProfileModal({
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
-                  {existing ? "Save & find matching companies" : "Create profile & find matches"}
+                  {existing ? "✦ Save & find matching companies" : "✦ Create profile & find matches"}
                 </>
               )}
             </button>
