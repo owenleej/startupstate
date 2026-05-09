@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 
 const STAGES = ["Bootstrapped", "Pre-Seed", "Seed", "Series A", "Series B", "Series C", "Series D+"];
 const EMPLOYEE_BUCKETS = ["2-10", "11-50", "51-200", "201-500", "501-1K", "1K-5K"];
-const SECTIONS = ["B2B Software", "FinTech", "Consumer", "Bio/Medical Tech", "Security", "Energy", "Marketplaces"];
+const SECTIONS = ["B2B Software", "FinTech", "Consumer", "Bio/Medical Tech", "Security", "Energy", "Marketplaces", "Agriculture", "Manufacturing"];
 const STATUSES = ["approved", "pending", "rejected"];
 const PRODUCT_TYPES = ["Software", "Physical Product", "Services", "Marketplace"];
 const FOUNDER_DEMOGRAPHICS = ["Women", "Veteran", "Student", "Multicultural", "New American", "Rural"];
@@ -597,12 +597,12 @@ export default function AdminClient({
       {/* Top bar */}
       <header className="border-b border-zinc-800 bg-zinc-900 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{backgroundColor: "#C1440E"}}>
+            <svg className="w-6 h-6 text-white" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth={8} strokeLinejoin="round" strokeLinecap="round">
+              <path d="M15 10 L65 10 L65 42 L85 42 L85 90 L15 90 Z" />
             </svg>
           </div>
-          <span className="font-semibold text-sm">Startupstate</span>
+          <span className="font-semibold text-base">The Startup State</span>
           <span className="text-zinc-600">/</span>
           <span className="text-sm text-zinc-400">Admin</span>
         </div>

@@ -166,9 +166,9 @@ function QuestionsStep({
               }
             }}
             disabled={!canContinue}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-100 disabled:text-zinc-400 text-white font-semibold rounded-xl py-3 text-sm transition-colors shadow-sm disabled:shadow-none"
+            className="btn-ai w-full py-3 text-sm"
           >
-            {canContinue ? "Find my resources →" : "Select your industry and stage above"}
+            {canContinue ? "✦ Find my resources →" : "Select your industry and stage above"}
           </button>
         </div>
       </div>

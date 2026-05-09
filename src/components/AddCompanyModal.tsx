@@ -8,7 +8,8 @@ import NewsletterSignup from "./NewsletterSignup";
 
 const STAGES = ["Bootstrapped", "Pre-Seed", "Seed", "Series A", "Series B", "Series C", "Series D+"];
 const EMPLOYEE_BUCKETS = ["2-10", "11-50", "51-200", "201-500", "501-1K", "1K-5K"];
-const SECTIONS = ["B2B Software", "FinTech", "Consumer", "Bio/Medical Tech", "Security", "Energy", "Marketplaces"];
+const SECTIONS = ["B2B Software", "FinTech", "Consumer", "Bio/Medical Tech", "Security", "Energy", "Marketplaces", "Agriculture", "Manufacturing"];
+const PRODUCT_TYPES = ["Software", "Physical Product", "Services", "Marketplace"];
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 
 // Aligned with resource community tags so matching works
@@ -308,12 +309,10 @@ export default function AddCompanyModal({ onClose, onCompanyCreated }: { onClose
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Product type">
-              <input
-                className={inputCls}
-                value={form.product_type ?? ""}
-                onChange={(e) => set("product_type", e.target.value || null)}
-                placeholder="SaaS, Hardware…"
-              />
+              <select className={selectCls} value={form.product_type ?? ""} onChange={(e) => set("product_type", e.target.value || null)}>
+                <option value="">— Select —</option>
+                {PRODUCT_TYPES.map((t) => <option key={t}>{t}</option>)}
+              </select>
             </Field>
             <Field label="LinkedIn URL">
               <input
@@ -391,7 +390,7 @@ export default function AddCompanyModal({ onClose, onCompanyCreated }: { onClose
                 Careers page URL <span className="text-zinc-400">(optional)</span>
               </label>
               <input
-                type="url"
+                type="text"
                 value={form.careers_url}
                 onChange={(e) => set("careers_url", e.target.value)}
                 placeholder="careers.yourcompany.com"

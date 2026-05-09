@@ -15,12 +15,12 @@ export default function LoginPage() {
     <div className="flex min-h-full flex-col items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mb-3 inline-flex size-10 items-center justify-center rounded-xl bg-blue-600">
-            <svg className="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <div className="mb-3 inline-flex size-12 items-center justify-center rounded-xl" style={{backgroundColor: "#C1440E"}}>
+            <svg className="size-8 text-white" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth={8} strokeLinejoin="round" strokeLinecap="round">
+              <path d="M15 10 L65 10 L65 42 L85 42 L85 90 L15 90 Z" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-white">Startupstate</h1>
+          <h1 className="text-xl font-semibold text-white">The Startup State</h1>
           <p className="mt-1 text-sm text-zinc-400">Utah&apos;s startup ecosystem map</p>
         </div>
 
