@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import CompanyPanel from "./CompanyPanel";
 
@@ -33,28 +33,202 @@ function sectionColor(section: string | null) {
   return section && SECTIONS[section] ? SECTIONS[section].color : "#6B7280";
 }
 
-function toGeoJSON(companies: Company[]) {
+type ScreenPoint = { x: number; y: number };
+
+type CompanyFeatureProperties = {
+  kind: "company";
+  id: number;
+  name: string;
+  section: string | null;
+  color: string;
+  realLng: number;
+  realLat: number;
+};
+
+type OverflowFeatureProperties = {
+  kind: "overflow";
+  hiddenCount: number;
+  label: string;
+  groupLng: number;
+  groupLat: number;
+};
+
+type DisplayFeatureProperties = CompanyFeatureProperties | OverflowFeatureProperties;
+type DisplayFeature = GeoJSON.Feature<GeoJSON.Point, DisplayFeatureProperties>;
+type DisplayFeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Point, DisplayFeatureProperties>;
+
+const GROUP_RADIUS_PX = 42;
+const MAX_VISIBLE_PER_GROUP = 10;
+const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+
+function employeeRank(employees: string | null) {
+  if (!employees) return null;
+
+  const matches = employees.match(/\d[\d,]*(?:\.\d+)?\s*[kKmMbB]?/g);
+  if (!matches?.length) return null;
+
+  const values = matches
+    .map((raw) => {
+      const normalized = raw.replace(/,/g, "").trim();
+      const suffix = normalized.at(-1)?.toLowerCase();
+      const multiplier = suffix === "k" ? 1_000 : suffix === "m" ? 1_000_000 : suffix === "b" ? 1_000_000_000 : 1;
+      const numeric = Number.parseFloat(multiplier === 1 ? normalized : normalized.slice(0, -1));
+      return Number.isFinite(numeric) ? numeric * multiplier : null;
+    })
+    .filter((value): value is number => value != null);
+
+  return values.length ? Math.max(...values) : null;
+}
+
+function compareCompaniesForDisplay(a: Company, b: Company) {
+  const aRank = employeeRank(a.employees);
+  const bRank = employeeRank(b.employees);
+
+  if (aRank != null || bRank != null) {
+    if (aRank == null) return 1;
+    if (bRank == null) return -1;
+    if (aRank !== bRank) return bRank - aRank;
+  }
+
+  const nameCompare = a.name.localeCompare(b.name);
+  return nameCompare || a.id - b.id;
+}
+
+function displayOffset(index: number, total: number, center: ScreenPoint): ScreenPoint {
+  if (total <= 1) return center;
+
+  if (total <= 8) {
+    const radius = 10 + total * 1.2;
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / total;
+    return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
+  }
+
+  const angle = index * 2.399963229728653;
+  const radius = 10 + Math.sqrt(index + 1) * 5.5;
+  return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
+}
+
+function companyFeature(company: Company, coordinates: [number, number]): DisplayFeature {
   return {
-    type: "FeatureCollection" as const,
-    features: companies.map((c) => ({
-      type: "Feature" as const,
-      geometry: { type: "Point" as const, coordinates: [c.lng, c.lat] as [number, number] },
-      properties: {
-        id: c.id,
-        name: c.name,
-        section: c.section,
-        color: sectionColor(c.section),
-      },
-    })),
+    type: "Feature",
+    geometry: { type: "Point", coordinates },
+    properties: {
+      kind: "company",
+      id: company.id,
+      name: company.name,
+      section: company.section,
+      color: sectionColor(company.section),
+      realLng: company.lng,
+      realLat: company.lat,
+    },
   };
+}
+
+function overflowFeature(hiddenCount: number, coordinates: [number, number], groupCoordinates: [number, number]): DisplayFeature {
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates },
+    properties: {
+      kind: "overflow",
+      hiddenCount,
+      label: hiddenCount < 100 ? `+${hiddenCount}` : "…",
+      groupLng: groupCoordinates[0],
+      groupLat: groupCoordinates[1],
+    },
+  };
+}
+
+function toGeoJSON(companies: Company[], map?: mapboxgl.Map): DisplayFeatureCollection {
+  if (!map) {
+    return {
+      type: "FeatureCollection",
+      features: companies.map((company) => companyFeature(company, [company.lng, company.lat])),
+    };
+  }
+
+  const projected = companies.map((company) => ({ company, point: map.project([company.lng, company.lat]) }));
+  const parent = projected.map((_, index) => index);
+  const find = (index: number): number => {
+    while (parent[index] !== index) {
+      parent[index] = parent[parent[index]];
+      index = parent[index];
+    }
+    return index;
+  };
+  const union = (a: number, b: number) => {
+    const aRoot = find(a);
+    const bRoot = find(b);
+    if (aRoot !== bRoot) parent[bRoot] = aRoot;
+  };
+  const buckets = new Map<string, number[]>();
+  const bucketKey = (x: number, y: number) => `${x}:${y}`;
+
+  projected.forEach(({ point }, index) => {
+    const bucketX = Math.floor(point.x / GROUP_RADIUS_PX);
+    const bucketY = Math.floor(point.y / GROUP_RADIUS_PX);
+
+    for (let x = bucketX - 1; x <= bucketX + 1; x += 1) {
+      for (let y = bucketY - 1; y <= bucketY + 1; y += 1) {
+        const neighborIndexes = buckets.get(bucketKey(x, y));
+        if (!neighborIndexes) continue;
+
+        for (const neighborIndex of neighborIndexes) {
+          const neighborPoint = projected[neighborIndex].point;
+          const distance = Math.hypot(point.x - neighborPoint.x, point.y - neighborPoint.y);
+          if (distance <= GROUP_RADIUS_PX) union(index, neighborIndex);
+        }
+      }
+    }
+
+    const key = bucketKey(bucketX, bucketY);
+    buckets.set(key, [...(buckets.get(key) ?? []), index]);
+  });
+
+  const groups = new Map<number, typeof projected>();
+  projected.forEach((item, index) => {
+    const root = find(index);
+    groups.set(root, [...(groups.get(root) ?? []), item]);
+  });
+
+  const features: DisplayFeature[] = [];
+
+  for (const group of groups.values()) {
+    const center = group.reduce(
+      (acc, item) => ({ x: acc.x + item.point.x / group.length, y: acc.y + item.point.y / group.length }),
+      { x: 0, y: 0 },
+    );
+    const groupLngLat = map.unproject([center.x, center.y]);
+    const groupCoordinates: [number, number] = [groupLngLat.lng, groupLngLat.lat];
+    const ranked = [...group].sort((a, b) => compareCompaniesForDisplay(a.company, b.company));
+    const visibleCompanies = ranked.slice(0, MAX_VISIBLE_PER_GROUP);
+    const hiddenCount = ranked.length - visibleCompanies.length;
+    const displayCount = visibleCompanies.length + (hiddenCount > 0 ? 1 : 0);
+
+    visibleCompanies.forEach(({ company }, index) => {
+      const displayPoint = displayOffset(index, displayCount, center);
+      const displayLngLat = map.unproject([displayPoint.x, displayPoint.y]);
+      features.push(companyFeature(company, [displayLngLat.lng, displayLngLat.lat]));
+    });
+
+    if (hiddenCount > 0) {
+      const displayPoint = displayOffset(displayCount - 1, displayCount, center);
+      const displayLngLat = map.unproject([displayPoint.x, displayPoint.y]);
+      features.push(overflowFeature(hiddenCount, [displayLngLat.lng, displayLngLat.lat], groupCoordinates));
+    }
+  }
+
+  return { type: "FeatureCollection", features };
 }
 
 export default function MapClient({ companies }: { companies: Company[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const companiesRef = useRef(companies);
+  const visibleRef = useRef(companies);
   const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(
+    MAPBOX_ACCESS_TOKEN ? null : "Missing NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN",
+  );
   const [selected, setSelected] = useState<Company | null>(null);
   const [search, setSearch] = useState("");
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -62,16 +236,27 @@ export default function MapClient({ companies }: { companies: Company[] }) {
   // Keep ref current so click handlers always see latest data without re-init
   useEffect(() => { companiesRef.current = companies; }, [companies]);
 
-  const visible = companies.filter(
-    (c) =>
-      (!activeSection || c.section === activeSection) &&
-      (!search || c.name.toLowerCase().includes(search.toLowerCase())),
+  const visible = useMemo(
+    () => companies.filter(
+      (c) =>
+        (!activeSection || c.section === activeSection) &&
+        (!search || c.name.toLowerCase().includes(search.toLowerCase())),
+    ),
+    [activeSection, companies, search],
   );
+
+  const updateCompaniesSource = useCallback(() => {
+    if (!mapReady || !mapRef.current) return;
+    const source = mapRef.current.getSource("companies") as mapboxgl.GeoJSONSource | undefined;
+    source?.setData(toGeoJSON(visibleRef.current, mapRef.current));
+  }, [mapReady]);
+
+  const selectedVisible = selected && visible.some((c) => c.id === selected.id) ? selected : null;
 
   // ── Init map ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-    if (!token) { setMapError("Missing NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN"); return; }
+    const token = MAPBOX_ACCESS_TOKEN;
+    if (!token) return;
     if (!containerRef.current || mapRef.current) return;
 
     mapboxgl.accessToken = token;
@@ -93,53 +278,7 @@ export default function MapClient({ companies }: { companies: Company[] }) {
       // ── Source ──────────────────────────────────────────────────────────────
       map.addSource("companies", {
         type: "geojson",
-        data: toGeoJSON(companiesRef.current),
-        cluster: true,
-        clusterMaxZoom: 13,
-        clusterRadius: 45,
-      });
-
-      // ── Cluster glow ────────────────────────────────────────────────────────
-      map.addLayer({
-        id: "cluster-glow",
-        type: "circle",
-        source: "companies",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": "#3B82F6",
-          "circle-radius": ["step", ["get", "point_count"], 30, 10, 40, 50, 50],
-          "circle-opacity": 0.15,
-          "circle-blur": 0.8,
-        },
-      });
-
-      // ── Cluster circle ──────────────────────────────────────────────────────
-      map.addLayer({
-        id: "clusters",
-        type: "circle",
-        source: "companies",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": "#3B82F6",
-          "circle-radius": ["step", ["get", "point_count"], 20, 10, 28, 50, 36],
-          "circle-opacity": 0.92,
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "rgba(147,197,253,0.5)",
-        },
-      });
-
-      // ── Cluster count ───────────────────────────────────────────────────────
-      map.addLayer({
-        id: "cluster-count",
-        type: "symbol",
-        source: "companies",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": ["get", "point_count_abbreviated"],
-          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-          "text-size": 13,
-        },
-        paint: { "text-color": "#ffffff" },
+        data: toGeoJSON(companiesRef.current, map),
       });
 
       // ── Individual points ───────────────────────────────────────────────────
@@ -147,7 +286,7 @@ export default function MapClient({ companies }: { companies: Company[] }) {
         id: "points-glow",
         type: "circle",
         source: "companies",
-        filter: ["!", ["has", "point_count"]],
+        filter: ["==", ["get", "kind"], "company"],
         paint: {
           "circle-color": ["get", "color"],
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 12, 14, 18],
@@ -157,10 +296,23 @@ export default function MapClient({ companies }: { companies: Company[] }) {
       });
 
       map.addLayer({
+        id: "overflow-glow",
+        type: "circle",
+        source: "companies",
+        filter: ["==", ["get", "kind"], "overflow"],
+        paint: {
+          "circle-color": "#E5E7EB",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 12, 14, 16],
+          "circle-opacity": 0.18,
+          "circle-blur": 0.7,
+        },
+      });
+
+      map.addLayer({
         id: "points",
         type: "circle",
         source: "companies",
-        filter: ["!", ["has", "point_count"]],
+        filter: ["==", ["get", "kind"], "company"],
         paint: {
           "circle-color": ["get", "color"],
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 6, 14, 10],
@@ -170,8 +322,37 @@ export default function MapClient({ companies }: { companies: Company[] }) {
         },
       });
 
+      map.addLayer({
+        id: "overflow",
+        type: "circle",
+        source: "companies",
+        filter: ["==", ["get", "kind"], "overflow"],
+        paint: {
+          "circle-color": "#18181B",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 9, 14, 12],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "rgba(255,255,255,0.75)",
+          "circle-opacity": 0.96,
+        },
+      });
+
+      map.addLayer({
+        id: "overflow-label",
+        type: "symbol",
+        source: "companies",
+        filter: ["==", ["get", "kind"], "overflow"],
+        layout: {
+          "text-field": ["get", "label"],
+          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 7, 10, 14, 12],
+          "text-allow-overlap": true,
+          "text-ignore-placement": true,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+
       // ── Cursors ─────────────────────────────────────────────────────────────
-      for (const layer of ["points", "clusters"]) {
+      for (const layer of ["points", "overflow", "overflow-label"]) {
         map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; });
       }
@@ -191,18 +372,23 @@ export default function MapClient({ companies }: { companies: Company[] }) {
         });
       });
 
-      // ── Click: cluster → expand ─────────────────────────────────────────────
-      map.on("click", "clusters", (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
-        const clusterId = features[0]?.properties?.cluster_id;
-        if (clusterId == null) return;
-        const source = map.getSource("companies") as mapboxgl.GeoJSONSource;
-        const geom = features[0].geometry as GeoJSON.Point;
-        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-          if (err || zoom == null) return;
-          map.flyTo({ center: geom.coordinates as [number, number], zoom, duration: 500 });
+      // ── Click: overflow → zoom toward group ─────────────────────────────────
+      const zoomToOverflow = (e: mapboxgl.MapLayerMouseEvent) => {
+        const props = e.features?.[0]?.properties;
+        if (!props) return;
+        const lng = Number(props.groupLng);
+        const lat = Number(props.groupLat);
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+
+        map.flyTo({
+          center: [lng, lat],
+          zoom: Math.min(map.getZoom() + 2, map.getMaxZoom()),
+          duration: 500,
         });
-      });
+      };
+
+      map.on("click", "overflow", zoomToOverflow);
+      map.on("click", "overflow-label", zoomToOverflow);
 
       setMapReady(true);
     });
@@ -212,21 +398,26 @@ export default function MapClient({ companies }: { companies: Company[] }) {
       map.remove();
       mapRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Sync filtered data → map source ────────────────────────────────────────
   useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
-    const source = mapRef.current.getSource("companies") as mapboxgl.GeoJSONSource | undefined;
-    source?.setData(toGeoJSON(visible));
-  }, [visible, mapReady]); // eslint-disable-line react-hooks/exhaustive-deps
+    visibleRef.current = visible;
+    updateCompaniesSource();
+  }, [updateCompaniesSource, visible]);
 
-  // ── Clear selection if it's filtered out ───────────────────────────────────
+  // ── Recompute screen-space groups after completed map movement ─────────────
   useEffect(() => {
-    if (selected && !visible.find((c) => c.id === selected.id)) {
-      setSelected(null);
-    }
-  }, [visible, selected]);
+    if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    map.on("moveend", updateCompaniesSource);
+    map.on("zoomend", updateCompaniesSource);
+
+    return () => {
+      map.off("moveend", updateCompaniesSource);
+      map.off("zoomend", updateCompaniesSource);
+    };
+  }, [mapReady, updateCompaniesSource]);
 
   return (
     <div className="fixed inset-0 bg-zinc-900">
@@ -341,7 +532,7 @@ export default function MapClient({ companies }: { companies: Company[] }) {
       )}
 
       {/* ── Company panel ────────────────────────────────────────────────────── */}
-      <CompanyPanel company={selected} onClose={() => setSelected(null)} />
+      <CompanyPanel company={selectedVisible} onClose={() => setSelected(null)} />
     </div>
   );
 }
