@@ -778,7 +778,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
             </svg>
             Start a Company
           </button>
-          {isLoggedIn && (
+          {isLoggedIn && ownedCompanies.length === 0 && (
             <button
               onClick={() => setShowAddCompany(true)}
               className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold rounded-2xl px-4 py-2.5 shadow-lg transition-colors whitespace-nowrap"
@@ -930,31 +930,20 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
           {ownedCompanies.length > 0 && (
             <div className="relative" ref={myCompaniesDropdownRef}>
               <button
-                onClick={() => {
-                  if (ownedCompanies.length === 1) {
-                    setMyCompanySelected(ownedCompanies[0]);
-                    setSelected(null);
-                    setSelectedCluster(null);
-                    setShowMyCompaniesDropdown(false);
-                  } else {
-                    setShowMyCompaniesDropdown((o) => !o);
-                  }
-                }}
+                onClick={() => setShowMyCompaniesDropdown((o) => !o)}
                 className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-semibold rounded-2xl px-3.5 py-2.5 shadow-lg transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 {ownedCompanies.length === 1 ? "My Company" : "My Companies"}
-                {ownedCompanies.length > 1 && (
-                  <svg className={`w-3 h-3 transition-transform ${showMyCompaniesDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                )}
+                <svg className={`w-3 h-3 transition-transform ${showMyCompaniesDropdown ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
 
-              {showMyCompaniesDropdown && ownedCompanies.length > 1 && (
-                <div className="absolute top-full right-0 mt-1.5 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-xl overflow-hidden z-30 min-w-[200px]">
+              {showMyCompaniesDropdown && (
+                <div className="absolute top-full right-0 mt-1.5 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-xl overflow-hidden z-30 min-w-[210px]">
                   {ownedCompanies.map((c) => (
                     <button
                       key={c.id}
@@ -972,6 +961,19 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
                       )}
                     </button>
                   ))}
+                  <div className="border-t border-zinc-700/60" />
+                  <button
+                    onClick={() => {
+                      setShowMyCompaniesDropdown(false);
+                      setShowAddCompany(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-blue-400 hover:text-blue-300 hover:bg-zinc-800 transition-colors font-medium"
+                  >
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add another company
+                  </button>
                 </div>
               )}
             </div>

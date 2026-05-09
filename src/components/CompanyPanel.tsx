@@ -493,22 +493,26 @@ function SingleView({
                 </>
               )}
             </button>
-            <InvestorEmailSection
-              companyId={company.id}
-              recipientEmail={company.investor_contact_email ?? ""}
-            />
             <p className="text-[11px] text-zinc-400 text-center leading-relaxed">
               {isFollowing
                 ? "You'll be notified of updates and funding announcements."
                 : "Get notified when this company updates their profile or seeks funding."}
             </p>
-          </div>
-        ) : company.owner_id ? (
-          <div className="flex items-center justify-center gap-2 text-sm text-zinc-400 py-1">
-            <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            This company has been claimed
+            <InvestorEmailSection
+              companyId={company.id}
+              recipientEmail={company.investor_contact_email ?? ""}
+            />
+            <div className="border-t border-zinc-100 pt-3">
+              <a
+                href={`/claim/${company.id}`}
+                className="w-full flex items-center justify-center gap-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 hover:text-zinc-800 font-semibold rounded-2xl py-2.5 text-sm transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Claim this company
+              </a>
+            </div>
           </div>
         ) : isLoggedIn ? (
           <a
