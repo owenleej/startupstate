@@ -61,14 +61,14 @@ COMPANY:
 - Founded: ${company.founded_year ?? "Unknown"}
 - Product type: ${company.product_type ?? "Unknown"}
 - Location: ${company.utah_county ? `${company.utah_county} County, Utah` : "Utah"}
-- Seeking funding: ${company.seeking_funding ? "Yes" : "Not specified"}
+- Actively seeking investment: ${company.seeking_funding ? "Yes — this company is actively raising" : "Not specified"}
 - Description: ${company.description ?? "Not provided"}
 
 Write a concise, warm, professional investor outreach email. The email should:
 1. Introduce ${senderName} and their investment focus naturally
 2. Show genuine knowledge of the company — reference specific details (stage, sector, what they do)
 3. Explain clearly why this investor and company are a good fit to explore together
-4. Be direct about intent — express interest in a brief introductory call
+4. ${company.seeking_funding ? "Acknowledge that the company is actively raising — frame this as timely and direct about exploring a potential investment." : "Be direct about intent — express interest in a brief introductory call to explore fit."}
 5. Be 3–4 short paragraphs max. No fluff, no generic phrases like "I came across your company"
 6. Close with the investor's name${firmName ? ` and firm (${firmName})` : ""}
 

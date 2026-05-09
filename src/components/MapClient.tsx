@@ -305,6 +305,7 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
   const [activeStage, setActiveStage] = useState<string | null>(null);
   const [activeSize, setActiveSize] = useState<string | null>(null);
   const [activeHiring, setActiveHiring] = useState(false);
+  const [activeSeeking, setActiveSeeking] = useState(false);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -330,9 +331,10 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
           (!activeStage || c.stage === activeStage) &&
           (!activeSize || c.employees === activeSize) &&
           (!activeHiring || c.hiring === true) &&
+          (!activeSeeking || c.seeking_funding === true) &&
           (!search || c.name.toLowerCase().includes(search.toLowerCase())),
       ),
-    [investorMatchIds, activeSection, activeStage, activeSize, activeHiring, companies, search],
+    [investorMatchIds, activeSection, activeStage, activeSize, activeHiring, activeSeeking, companies, search],
   );
 
   async function runInvestorMatch() {
@@ -876,6 +878,17 @@ export default function MapClient({ companies, isAdmin = false, isLoggedIn = fal
         >
           <span>💼</span>
           We&apos;re Hiring
+        </button>
+        <button
+          onClick={() => setActiveSeeking((v) => !v)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium shadow-md transition-colors whitespace-nowrap ${
+            activeSeeking
+              ? "bg-violet-500 text-white border border-violet-400"
+              : "bg-zinc-900/85 backdrop-blur-md border border-zinc-700/50 text-zinc-300 hover:text-white"
+          }`}
+        >
+          <span>💰</span>
+          Seeking Investment
         </button>
         {investorMatches && (
           <button

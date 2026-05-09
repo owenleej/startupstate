@@ -28,7 +28,7 @@ export async function matchCompaniesForInvestor(): Promise<{
   // Fetch approved companies with relevant fields
   const { data: companies, error: cErr } = await supabase
     .from("companies")
-    .select("id, name, stage, section, employees, description, product_type, founded_year, utah_county")
+    .select("id, name, stage, section, employees, description, product_type, founded_year, utah_county, seeking_funding")
     .eq("status", "approved");
 
   if (cErr || !companies?.length) return { matches: null, error: "Could not fetch companies." };
@@ -42,6 +42,7 @@ export async function matchCompaniesForInvestor(): Promise<{
     employees: c.employees ?? "unknown",
     product_type: c.product_type ?? null,
     county: c.utah_county ?? null,
+    seeking_investment: c.seeking_funding ?? false,
     description: c.description ? c.description.slice(0, 200) : null,
   }));
 
@@ -72,6 +73,7 @@ ${JSON.stringify(compactCompanies, null, 2)}
 Select the TOP 10 companies that best match this investor's profile, preferences, and thesis.
 Consider: stage fit, sector alignment, check size compatibility, geographic interest, and thesis alignment.
 If preferred_stages or preferred_sectors are empty, use the thesis/bio to infer preferences.
+Give a meaningful ranking boost to companies where seeking_investment is true — these companies are actively looking for investors and represent immediate opportunities. Mention this signal explicitly in the match_reason when relevant.
 
 Write the match_reason field differently based on rank:
 - Ranks 1–3 (top matches): Write 3–4 sentences. Be specific about WHY this company is a strong fit for THIS investor. Reference concrete details from both the investor profile and the company (stage, sector, description, what problem they solve). Explain what makes the opportunity compelling and how it aligns with the investor's thesis or preferences.
